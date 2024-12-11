@@ -1,33 +1,74 @@
+import { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
-import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Button, Animated } from "react-native";
+import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Animated, Alert } from "react-native";
+import { FillRandom, generateCorrectAnswers, GetColSums, GetCorrectAnswersMatrix, GetRowSums } from "../assets/functions";
 
 interface GridViewProps {
   rows: number; // Number of regular rows (excluding sum row)
   cols: number; // Number of regular columns (excluding sum column)
-  rowSums:number[];
-  colSums:number[];
-  correctAnswers: boolean[][];
-  gridValues: number[][];
+  navigation: StackNavigationProp<any>;
+}
+const screenWidth = Dimensions.get("window").width;
+const screenHeight = Dimensions.get("window").height;
+const GameOverOptions = ["Restart", "New Game", "Home"];
+
+let gridValues: number[][] = [];
+let answers: [number, number][] = [];
+let correctAnswers: boolean[][] = [];
+let rowSums: number[] = [];
+let colSums: number[] = [];
+let isNewGame:boolean = true;
+
+function SetInitialValues(rows: number, cols: number) {
+  if(isNewGame){
+    isNewGame=false;
+    gridValues = FillRandom(rows, cols);
+    answers = generateCorrectAnswers(gridValues);
+    correctAnswers = GetCorrectAnswersMatrix(rows, cols, answers);
+    rowSums = GetRowSums(correctAnswers, gridValues);
+    colSums = GetColSums(correctAnswers, gridValues);
+  }
 }
 
-const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridValues, correctAnswers }) => {
-  const screenWidth = Dimensions.get("window").width;
-  const screenHeight = Dimensions.get("window").height;
+const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
+  
+  let isRowFinished=false;
+  let isColFinished=false;
+  let isGameOn = true;
+  SetInitialValues(rows,cols);
 
   // Calculate cell size dynamically
   const cellSize = Math.min(screenWidth * 0.95, screenHeight * 0.95) / (Math.min(rows, cols) + 1);
   const bigFontSize = 0.4 * cellSize;
   const smallFontSize = 0.2 * cellSize;
 
+
+  //State Variables
+  const [heartsNum, setHeartsNum] = useState<number>(3);
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [addUpRows, setAddUpRows] = useState<number[]>(Array(rows).fill(0));
   const [addUpCols, setAddUpCols] = useState<number[]>(Array(cols).fill(0));
-  const [revealedCells, setRevealedCells] = useState<boolean[][]>(
-    Array(rows)
-      .fill(null)
-      .map(() => Array(cols).fill(false))
-  );
+  const [revealedCells, setRevealedCells] = useState<boolean[][]>(Array(rows).fill(null).map(() => Array(cols).fill(false)));
   const [buttonState,setButtonState] = useState<boolean>(false);
-  const [tableValues,setTableValues]=useState<number[][]>(gridValues);
+  const [tableValues, setTableValues] = useState<number[][]>(gridValues);
+  const [rowInitialSums, setRowInitialSums] = useState<number[]>(rowSums);
+  const [colInitialSums, setColInitialSums] = useState<number[]>(colSums);
+
+  const RestartGame=()=>{
+    isRowFinished = false;
+    isColFinished = false;
+    isGameOn = true;
+
+    setHeartsNum(3);
+    setIsGameOver(false);
+    setAddUpRows(Array(rows).fill(0));
+    setAddUpCols(Array(cols).fill(0));
+    setRevealedCells(Array(rows).fill(null).map(() => Array(cols).fill(false)));
+    setButtonState(false);
+    setTableValues(gridValues);
+    setRowInitialSums(rowSums);
+    setColInitialSums(colSums);
+  }
 
   //Animation Values
   let alertColor:Animated.Value[][] = [];
@@ -40,91 +81,184 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridV
   }
 
 
-
   const handleCellClick = (rowIndex: number, colIndex: number) => {
     if(buttonState){
-      if (correctAnswers[rowIndex][colIndex] && !revealedCells[rowIndex][colIndex]) {
-        setRevealedCells((prev) => {
-          const updated = prev.map((row, rIdx) =>
-            row.map((cell, cIdx) =>
-              rIdx === rowIndex && cIdx === colIndex ? true : cell
-            )
-          );
-          return updated;
-        });
-  
-        // Update addUpRows and addUpCols
-        setAddUpRows((prev) => {
-          const updated = prev.map<number>((value, index) => {
-            if (index == rowIndex) { return value + gridValues[rowIndex][colIndex]; }
-            else { return value; }
-          });
-          return updated;
-        });
-  
-        setAddUpCols((prev) => {
-          const updated = prev.map((value, index) => {
-            if (index == colIndex) { return value + gridValues[rowIndex][colIndex]; }
-            else { return value; }
-          });
-          return updated;
-        });
-      }
-      else{
-        if(tableValues[rowIndex][colIndex]>0){
-          Animated.timing(alertColor[rowIndex][colIndex],{
-            toValue: 1,
-            useNativeDriver: false,
-            duration:150
-          }).start(()=>{
-            Animated.timing(alertColor[rowIndex][colIndex],{
-              toValue: 0,
-              useNativeDriver: false,
-              duration: 150
-            }).start();
-          });
+      if(!revealedCells[rowIndex][colIndex]){
+        if (correctAnswers[rowIndex][colIndex]) {
+          ReavealAction(rowIndex,colIndex);
+          // Update addUpRows and addUpCols
+          AddUpRowAndColState(rowIndex,colIndex);
+        }
+        else{
+          if(tableValues[rowIndex][colIndex]>0){
+            ErrorAnimation(rowIndex,colIndex);
+            ReduceHeart();
+          }
         }
       }
     }
     else{
       if (!correctAnswers[rowIndex][colIndex]){
-        setTableValues((prev)=>{
-          const updated = prev.map<number[]>((rowTableValue,rowTableIndex)=>{
-            return rowTableValue.map<number>((colTableValue,colTableIndex)=>{
-              if(rowTableIndex==rowIndex && colTableIndex==colIndex){return 0;}
-              else{return colTableValue;}
-            });
-          });
-          return updated;
-        });
-        gridValues[rowIndex][colIndex]=0;
+        RemoveAction(rowIndex,colIndex);
       }
       else{
         if(!revealedCells[rowIndex][colIndex]){
-          Animated.timing(alertColor[rowIndex][colIndex],{
-            toValue: 1,
-            useNativeDriver: false,
-            duration:150
-          }).start(()=>{
-            Animated.timing(alertColor[rowIndex][colIndex],{
-              toValue: 0,
-              useNativeDriver: false,
-              duration: 150
-            }).start();
-          });
+          ErrorAnimation(rowIndex,colIndex);
+          ReduceHeart();
         }
       }
     }
   };
 
+  const WinGame=()=>{
+    if(isColFinished && isRowFinished && isGameOn){
+      isGameOn=false;
+      Alert.alert("You Win");
+    }
+  }
+
+  const GameOver=()=>{
+    isGameOn=false;
+    setIsGameOver(true);
+  }
+
+  const ReduceHeart=()=>{
+    setHeartsNum((prev)=>{
+      const tempHeart=prev-1;
+      if(tempHeart==0){
+        GameOver();
+      }
+      return tempHeart;
+    });
+  }
+
+  const ReavealAction=(rowIndex:number,colIndex:number)=>{
+    setRevealedCells((prev) => {
+      const updated = prev.map((row, rIdx) =>
+        row.map((cell, cIdx) =>
+          rIdx === rowIndex && cIdx === colIndex ? true : cell
+        )
+      );
+      return updated;
+    });
+  }
+
+  const AddUpRowAndColState=(rowIndex:number,colIndex:number)=>{
+    setAddUpRows((prev) => {
+      const updated = prev.map<number>((value, index) => {
+        if (index == rowIndex) { 
+          let tempValue=value + gridValues[rowIndex][colIndex];
+          if(tempValue==rowInitialSums[rowIndex]){
+            setRowSum(rowIndex);
+            tempValue=0;
+          }
+          return tempValue; 
+        }
+        else { return value; }
+      });
+      return updated;
+    });
+    setAddUpCols((prev) => {
+      const updated = prev.map((value, index) => {
+        if (index == colIndex) { 
+          let tempValue=value + gridValues[rowIndex][colIndex];
+          if(tempValue==colInitialSums[colIndex]){
+            setColSum(colIndex);
+            tempValue=0;
+          }
+          return tempValue; 
+        }
+        else { return value; }
+      });
+      return updated;
+    });
+  }
+
+  const setRowSum=(rowIndex:number)=>{
+    isRowFinished=true;
+    setRowInitialSums((prev)=>{
+      const updated=prev.map<number>((numValue,index)=>{
+        let tempNum=numValue;
+        if(index==rowIndex){tempNum = 0;}
+        if(tempNum>0){isRowFinished=false;}
+        return tempNum;
+      });
+      if(isRowFinished){WinGame();}
+      return updated;
+    });
+  }
+
+  const setColSum=(colIndex:number)=>{
+    isColFinished=true;
+    setColInitialSums((prev)=>{
+      const updated=prev.map<number>((numValue,index)=>{
+        let tempNum=numValue;
+        if(index==colIndex){tempNum = 0;}
+        if(tempNum>0){isColFinished=false;}
+        return tempNum;
+      });
+      if(isColFinished){WinGame();}
+      return updated;
+    });
+  }
+
+  const RemoveAction=(rowIndex:number,colIndex:number)=>{
+    setTableValues((prev)=>{
+      const updated = prev.map<number[]>((rowTableValue,rowTableIndex)=>{
+        return rowTableValue.map<number>((colTableValue,colTableIndex)=>{
+          if(rowTableIndex==rowIndex && colTableIndex==colIndex){return 0;}
+          else{return colTableValue;}
+        });
+      });
+      return updated;
+    });
+  }
+
+  const ErrorAnimation=(rowIndex:number,colIndex:number)=>{
+    Animated.timing(alertColor[rowIndex][colIndex],{
+      toValue: 1,
+      useNativeDriver: false,
+      duration:150
+    }).start(()=>{
+      Animated.timing(alertColor[rowIndex][colIndex],{
+        toValue: 0,
+        useNativeDriver: false,
+        duration: 150
+      }).start();
+    });
+  }
+
+  const GameOverActions=(index:number)=>{
+    //Alert.alert(index.toString());
+    switch (index) {
+      case 0:
+        RestartGame();
+        break;
+      case 1:
+        isNewGame=true;
+        SetInitialValues(rows,cols);
+        RestartGame();
+        break;
+      default:
+        navigation.goBack();
+        break;
+    }
+  }
+
 
   return (
     <View style={styles.container}>
+      {/* Hearts */}
+      <View style={[styles.hearts]}>
+        <Text style={[{fontSize:30}]}>❤: {heartsNum}</Text>
+      </View>
+      {/* Button */}
       <TouchableOpacity onPress={()=>{
         setButtonState(!buttonState);
       }}><View style={[styles.button,{backgroundColor:buttonState?GreenColor:RedColor}]}>
         <Text style={styles.text}>{buttonState?'Mark':'Remove'}</Text>  
       </View></TouchableOpacity>
+
       {/* Render Header Row */}
       <View style={styles.row}>
         {/* Empty corner cell */}
@@ -132,12 +266,12 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridV
           <Text style={styles.text}></Text>
         </View>
         {/* Column sums */}
-        {colSums.map((sum, colIndex) => (
+        {colInitialSums.map((sum, colIndex) => (
           <View
             key={`col-sum-${colIndex}`}
-            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize }]}
+            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize, backgroundColor: sum>0?BlueColor:PinkColor }]}
           >
-            <Text style={[styles.text, { fontSize: bigFontSize }]}>{sum}</Text>
+            <Text style={[styles.text, { fontSize: bigFontSize }]}>{sum>0?sum:'✓'}</Text>
             <Text style={[styles.addUp, { left: cellSize / 20, top: cellSize / 20, fontSize: smallFontSize }]}>{addUpCols[colIndex] > 0 ? addUpCols[colIndex] : ''}</Text>
           </View>
         ))}
@@ -148,9 +282,9 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridV
         <View key={`row-${rowIndex}`} style={styles.row}>
           {/* Row sum */}
           <View
-            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize }]}
+            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize, backgroundColor: rowInitialSums[rowIndex]>0?BlueColor:PinkColor }]}
           >
-            <Text style={[styles.text, { fontSize: bigFontSize }]}>{rowSums[rowIndex]}</Text>
+            <Text style={[styles.text, { fontSize: bigFontSize }]}>{rowInitialSums[rowIndex]>0?rowInitialSums[rowIndex]:'✓'}</Text>
             <Text style={[styles.addUp, { left: cellSize / 20, top: cellSize / 20, fontSize: smallFontSize }]}>{addUpRows[rowIndex] > 0 ? addUpRows[rowIndex] : ''}</Text>
           </View>
           {/* Regular cells */}
@@ -176,10 +310,20 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridV
           ))}
         </View>
       ))}
+      <View style={[styles.overLayer,{display:isGameOver?'flex':'none'}]}>
+        {GameOverOptions.map((option,index)=>{
+          return <TouchableOpacity key={index} onPress={()=>{GameOverActions(index);}}>
+            <View style={styles.gameOverButtons}>
+              <Text style={styles.gameOverButtonText}>{option}</Text>
+            </View>
+          </TouchableOpacity>;
+        })}
+      </View>
     </View>
   );
 };
 
+const PinkColor='#f699f8';
 const GreenColor='#4fca3b';
 const RedColor='#fe7e7e';
 const BlueColor='#0068ff';
@@ -226,6 +370,37 @@ const styles = StyleSheet.create({
     borderRadius:10,
     borderColor:'green',
     borderWidth:2,
+  },
+  hearts:{
+    marginBottom:10,
+    alignItems:'center',
+    justifyContent: "center",
+  },
+  overLayer:{
+    position:'absolute',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    width:screenWidth,
+    height:screenHeight - 60,
+    left:-10,
+    top:-10,
+    justifyContent: "center",
+    alignItems:'center'
+    
+  },
+  gameOverButtons:{
+    marginBottom:20,
+    alignItems:'center',
+    backgroundColor:'#0000a9',
+    height:60,
+    justifyContent: "center",
+    borderRadius:10,
+    borderColor:'black',
+    borderWidth:2,
+    width:screenWidth/1.5,
+  },
+  gameOverButtonText:{
+    fontSize:30,
+    color:'white',
   }
 });
 

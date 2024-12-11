@@ -77,8 +77,8 @@ export function GetRowSums(answers:boolean[][],data:number[][]){
     const result:number[]=[];
     for(let i=0;i<data.length;i++){result.push(0);}
     answers.forEach((rowValue,rowIndex)=>{
-        rowValue.forEach((colValue,colIndex)=>{
-            if(colValue){
+        rowValue.forEach((boolValue,colIndex)=>{
+            if(boolValue){
                 result[rowIndex]+=data[rowIndex][colIndex];
             }
         });
@@ -90,8 +90,8 @@ export function GetColSums(answers:boolean[][],data:number[][]){
     const result:number[]=[];
     for(let i=0;i<data[0].length;i++){result.push(0);}
     answers.forEach((rowValue,rowIndex)=>{
-        rowValue.forEach((colValue,colIndex)=>{
-            if(colValue){
+        rowValue.forEach((boolValue,colIndex)=>{
+            if(boolValue){
                 result[colIndex]+=data[rowIndex][colIndex];
             }
         });

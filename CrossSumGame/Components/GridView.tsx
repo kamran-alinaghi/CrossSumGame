@@ -1,14 +1,17 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Text, Dimensions, TouchableOpacity } from "react-native";
+import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Button } from "react-native";
+import { green } from "react-native-reanimated/lib/typescript/Colors";
 
 interface GridViewProps {
   rows: number; // Number of regular rows (excluding sum row)
   cols: number; // Number of regular columns (excluding sum column)
-  correctAnswers: [number, number][];
+  rowSums:number[];
+  colSums:number[];
+  correctAnswers: boolean[][];
   gridValues: number[][];
 }
 
-const GridView: React.FC<GridViewProps> = ({ rows, cols, gridValues, correctAnswers }) => {
+const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridValues, correctAnswers }) => {
   const screenWidth = Dimensions.get("window").width;
   const screenHeight = Dimensions.get("window").height;
 
@@ -17,9 +20,6 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, gridValues, correctAnsw
   const bigFontSize = 0.4 * cellSize;
   const smallFontSize = 0.2 * cellSize;
 
-  // Mock data for sums (replace with real logic)
-  const rowSums: number[] = Array(rows).fill(0);
-  const colSums = Array(cols).fill(0);
   const [addUpRows, setAddUpRows] = useState<number[]>(Array(rows).fill(0));
   const [addUpCols, setAddUpCols] = useState<number[]>(Array(cols).fill(0));
   const [revealedCells, setRevealedCells] = useState<boolean[][]>(
@@ -27,15 +27,12 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, gridValues, correctAnsw
       .fill(null)
       .map(() => Array(cols).fill(false))
   );
+  const [buttonState,setButtonState] = useState<boolean>(false);
 
 
 
   const handleCellClick = (rowIndex: number, colIndex: number) => {
-    const isCorrect = correctAnswers.some(
-      ([r, c]) => r === rowIndex && c === colIndex
-    );
-
-    if (isCorrect) {
+    if (correctAnswers[rowIndex][colIndex]) {
       setRevealedCells((prev) => {
         const updated = prev.map((row, rIdx) =>
           row.map((cell, cIdx) =>
@@ -64,20 +61,18 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, gridValues, correctAnsw
     }
   };
 
-  //const correctNaswers=generateCorrectAnswers(gridValues);
-
-  correctAnswers.forEach(([rowIndex, colIndex]) => {
-    rowSums[rowIndex] += gridValues[rowIndex][colIndex];
-    colSums[colIndex] += gridValues[rowIndex][colIndex];
-  });
-
 
   return (
-    <View>
+    <View style={styles.container}>
+      <TouchableOpacity onPress={()=>{
+        setButtonState(!buttonState);
+      }}><View style={[styles.button,{backgroundColor:buttonState?GreenColor:RedColor}]}>
+        <Text style={styles.text}>{buttonState?'Mark':'Remove'}</Text>  
+      </View></TouchableOpacity>
       {/* Render Header Row */}
       <View style={styles.row}>
         {/* Empty corner cell */}
-        <View style={[styles.corner, { width: cellSize, height: cellSize, backgroundColor: "white" }]}>
+        <View style={[styles.corner, { width: cellSize, height: cellSize }]}>
           <Text style={styles.text}></Text>
         </View>
         {/* Column sums */}
@@ -112,7 +107,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, gridValues, correctAnsw
                 style={[
                   styles.cell,
                   { width: cellSize, height: cellSize },
-                  { backgroundColor: revealedCells[rowIndex][colIndex] ? 'green' : 'white', }
+                  { backgroundColor: revealedCells[rowIndex][colIndex] ? GreenColor : 'white', }
                 ]}
               >
                 <Text style={[styles.text, {
@@ -126,6 +121,9 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, gridValues, correctAnsw
   );
 };
 
+const GreenColor='#4fca3b';
+const RedColor='#fe7e7e';
+const BlueColor='#0068ff';
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
@@ -140,7 +138,7 @@ const styles = StyleSheet.create({
   sumCell: {
     borderWidth: 1,
     borderColor: "#999",
-    backgroundColor: "#0068ff",
+    backgroundColor: BlueColor,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 10,
@@ -156,14 +154,20 @@ const styles = StyleSheet.create({
   addUp: {
     position: 'absolute',
     fontSize: 10,
+  },
+  container:{
+    backgroundColor:"#98bef5",
+  },
+  button:{
+    marginBottom:20,
+    alignItems:'center',
+    backgroundColor:GreenColor,
+    height:40,
+    justifyContent: "center",
+    borderRadius:10,
+    borderColor:'green',
+    borderWidth:2,
   }
 });
 
 export default GridView;
-
-function ArrayContains(array: [number, number][], instance: [number, number]): boolean {
-  for (let i = 0; i < array.length; i++) {
-    if (array[i][0] == instance[0] && array[i][1] == instance[1]) { return true; }
-  }
-  return false;
-}

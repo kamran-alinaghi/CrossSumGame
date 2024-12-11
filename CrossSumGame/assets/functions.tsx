@@ -57,3 +57,44 @@ export function GetRevealedArray(rows: number, cols: number): boolean[][] {
     );
     return result;
 }
+
+export function GetCorrectAnswersMatrix(rows: number, cols: number, answers: [number, number][]): boolean[][] {
+    const result: boolean[][] = [];
+    for (let i = 0; i < rows; i++) {
+        const tempArr: boolean[] = [];
+        for (let j = 0; j < cols; j++) {
+            tempArr.push(false);
+        }
+        result.push(tempArr);
+    }
+    for (let i = 0; i < answers.length; i++) {
+        result[answers[i][0]][answers[i][1]] = true;
+    }
+    return result;
+}
+
+export function GetRowSums(answers:boolean[][],data:number[][]){
+    const result:number[]=[];
+    for(let i=0;i<data.length;i++){result.push(0);}
+    answers.forEach((rowValue,rowIndex)=>{
+        rowValue.forEach((colValue,colIndex)=>{
+            if(colValue){
+                result[rowIndex]+=data[rowIndex][colIndex];
+            }
+        });
+    });
+    return result;
+}
+
+export function GetColSums(answers:boolean[][],data:number[][]){
+    const result:number[]=[];
+    for(let i=0;i<data[0].length;i++){result.push(0);}
+    answers.forEach((rowValue,rowIndex)=>{
+        rowValue.forEach((colValue,colIndex)=>{
+            if(colValue){
+                result[colIndex]+=data[rowIndex][colIndex];
+            }
+        });
+    });
+    return result;
+}

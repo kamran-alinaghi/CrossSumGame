@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Button } from "react-native";
-import { green } from "react-native-reanimated/lib/typescript/Colors";
+import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Button, Animated } from "react-native";
 
 interface GridViewProps {
   rows: number; // Number of regular rows (excluding sum row)
@@ -28,36 +27,93 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridV
       .map(() => Array(cols).fill(false))
   );
   const [buttonState,setButtonState] = useState<boolean>(false);
+  const [tableValues,setTableValues]=useState<number[][]>(gridValues);
+
+  //Animation Values
+  let alertColor:Animated.Value[][] = [];
+  for(let i=0;i<rows;i++){
+    const tempAnimatedArray:Animated.Value[]=[];
+    for(let j=0;j<cols;j++){
+      tempAnimatedArray.push(new Animated.Value(0));
+    }
+    alertColor.push(tempAnimatedArray);
+  }
 
 
 
   const handleCellClick = (rowIndex: number, colIndex: number) => {
-    if (correctAnswers[rowIndex][colIndex]) {
-      setRevealedCells((prev) => {
-        const updated = prev.map((row, rIdx) =>
-          row.map((cell, cIdx) =>
-            rIdx === rowIndex && cIdx === colIndex ? true : cell
-          )
-        );
-        return updated;
-      });
-
-      // Update addUpRows and addUpCols
-      setAddUpRows((prev) => {
-        const updated = prev.map<number>((value, index) => {
-          if (index == rowIndex) { return value + gridValues[rowIndex][colIndex]; }
-          else { return value; }
+    if(buttonState){
+      if (correctAnswers[rowIndex][colIndex] && !revealedCells[rowIndex][colIndex]) {
+        setRevealedCells((prev) => {
+          const updated = prev.map((row, rIdx) =>
+            row.map((cell, cIdx) =>
+              rIdx === rowIndex && cIdx === colIndex ? true : cell
+            )
+          );
+          return updated;
         });
-        return updated;
-      });
-
-      setAddUpCols((prev) => {
-        const updated = prev.map((value, index) => {
-          if (index == colIndex) { return value + gridValues[rowIndex][colIndex]; }
-          else { return value; }
+  
+        // Update addUpRows and addUpCols
+        setAddUpRows((prev) => {
+          const updated = prev.map<number>((value, index) => {
+            if (index == rowIndex) { return value + gridValues[rowIndex][colIndex]; }
+            else { return value; }
+          });
+          return updated;
         });
-        return updated;
-      });
+  
+        setAddUpCols((prev) => {
+          const updated = prev.map((value, index) => {
+            if (index == colIndex) { return value + gridValues[rowIndex][colIndex]; }
+            else { return value; }
+          });
+          return updated;
+        });
+      }
+      else{
+        if(tableValues[rowIndex][colIndex]>0){
+          Animated.timing(alertColor[rowIndex][colIndex],{
+            toValue: 1,
+            useNativeDriver: false,
+            duration:150
+          }).start(()=>{
+            Animated.timing(alertColor[rowIndex][colIndex],{
+              toValue: 0,
+              useNativeDriver: false,
+              duration: 150
+            }).start();
+          });
+        }
+      }
+    }
+    else{
+      if (!correctAnswers[rowIndex][colIndex]){
+        setTableValues((prev)=>{
+          const updated = prev.map<number[]>((rowTableValue,rowTableIndex)=>{
+            return rowTableValue.map<number>((colTableValue,colTableIndex)=>{
+              if(rowTableIndex==rowIndex && colTableIndex==colIndex){return 0;}
+              else{return colTableValue;}
+            });
+          });
+          return updated;
+        });
+        gridValues[rowIndex][colIndex]=0;
+      }
+      else{
+        if(!revealedCells[rowIndex][colIndex]){
+          Animated.timing(alertColor[rowIndex][colIndex],{
+            toValue: 1,
+            useNativeDriver: false,
+            duration:150
+          }).start(()=>{
+            Animated.timing(alertColor[rowIndex][colIndex],{
+              toValue: 0,
+              useNativeDriver: false,
+              duration: 150
+            }).start();
+          });
+        }
+      }
     }
   };
 
@@ -103,16 +159,19 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, rowSums, colSums, gridV
               key={`cell-${rowIndex}-${colIndex}`}
               onPress={() => handleCellClick(rowIndex, colIndex)}
             >
-              <View
+              <Animated.View
                 style={[
                   styles.cell,
                   { width: cellSize, height: cellSize },
-                  { backgroundColor: revealedCells[rowIndex][colIndex] ? GreenColor : 'white', }
+                  { backgroundColor: revealedCells[rowIndex][colIndex] ? GreenColor : alertColor[rowIndex][colIndex].interpolate({
+                    inputRange:[0,1],
+                    outputRange:['#ffffff',RedColor]
+                  }), }
                 ]}
               >
                 <Text style={[styles.text, {
-                }]}>{gridValues[rowIndex][colIndex]}</Text>
-              </View>
+                }]}>{tableValues[rowIndex][colIndex]>0?tableValues[rowIndex][colIndex]:''}</Text>
+              </Animated.View>
             </TouchableOpacity>
           ))}
         </View>

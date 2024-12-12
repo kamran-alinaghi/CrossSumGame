@@ -2,6 +2,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
 import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Animated, Alert } from "react-native";
 import { FillRandom, generateCorrectAnswers, GetColSums, GetCorrectAnswersMatrix, GetRowSums } from "../assets/functions";
+import { WinAnimation } from "../assets/Animations";
 
 interface GridViewProps {
   rows: number; // Number of regular rows (excluding sum row)
@@ -19,6 +20,14 @@ let rowSums: number[] = [];
 let colSums: number[] = [];
 let isNewGame:boolean = true;
 
+
+  //Animation Values
+  let alertColor:Animated.Value[][] = [];
+  
+  let winTextSize=new Animated.Value(1);
+
+
+
 function SetInitialValues(rows: number, cols: number) {
   if(isNewGame){
     isNewGame=false;
@@ -27,6 +36,15 @@ function SetInitialValues(rows: number, cols: number) {
     correctAnswers = GetCorrectAnswersMatrix(rows, cols, answers);
     rowSums = GetRowSums(correctAnswers, gridValues);
     colSums = GetColSums(correctAnswers, gridValues);
+
+    alertColor.length=0;
+    for(let i=0;i<rows;i++){
+      const tempAnimatedArray:Animated.Value[]=[];
+      for(let j=0;j<cols;j++){
+        tempAnimatedArray.push(new Animated.Value(0));
+      }
+      alertColor.push(tempAnimatedArray);
+    }
   }
 }
 
@@ -35,6 +53,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   let isRowFinished=false;
   let isColFinished=false;
   let isGameOn = true;
+  if(rows!=rowSums.length || cols!=colSums.length){isNewGame=true;}
   SetInitialValues(rows,cols);
 
   // Calculate cell size dynamically
@@ -46,6 +65,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   //State Variables
   const [heartsNum, setHeartsNum] = useState<number>(3);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
+  const [isWin,setIsWin] = useState<boolean>(false);
   const [addUpRows, setAddUpRows] = useState<number[]>(Array(rows).fill(0));
   const [addUpCols, setAddUpCols] = useState<number[]>(Array(cols).fill(0));
   const [revealedCells, setRevealedCells] = useState<boolean[][]>(Array(rows).fill(null).map(() => Array(cols).fill(false)));
@@ -70,15 +90,6 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     setColInitialSums(colSums);
   }
 
-  //Animation Values
-  let alertColor:Animated.Value[][] = [];
-  for(let i=0;i<rows;i++){
-    const tempAnimatedArray:Animated.Value[]=[];
-    for(let j=0;j<cols;j++){
-      tempAnimatedArray.push(new Animated.Value(0));
-    }
-    alertColor.push(tempAnimatedArray);
-  }
 
 
   const handleCellClick = (rowIndex: number, colIndex: number) => {
@@ -113,7 +124,12 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   const WinGame=()=>{
     if(isColFinished && isRowFinished && isGameOn){
       isGameOn=false;
-      Alert.alert("You Win");
+      setIsWin(true);
+      const winAnimation=WinAnimation(winTextSize,1,80);
+      winAnimation.start(()=>{
+        setIsWin(false);
+        NewGame();
+      });
     }
   }
 
@@ -235,9 +251,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
         RestartGame();
         break;
       case 1:
-        isNewGame=true;
-        SetInitialValues(rows,cols);
-        RestartGame();
+        NewGame();
         break;
       default:
         navigation.goBack();
@@ -245,19 +259,26 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     }
   }
 
+  const NewGame=()=>{
+    isNewGame = true;
+    SetInitialValues(rows, cols);
+    RestartGame();
+  }
+
 
   return (
     <View style={styles.container}>
       {/* Hearts */}
-      <View style={[styles.hearts]}>
-        <Text style={[{fontSize:30}]}>❤: {heartsNum}</Text>
+      <View style={[styles.hearts,{}]}>
+        <Text style={[{ fontSize: 30 }]}>❤: {heartsNum}</Text>
+        {/* Button */}
+        <TouchableOpacity onPress={() => { setButtonState(!buttonState); }}>
+          <View style={[styles.button, { width: 200, backgroundColor: buttonState ? GreenColor : RedColor }]}>
+            <Text style={styles.text}>{buttonState ? 'Mark' : 'Remove'}</Text>
+          </View>
+        </TouchableOpacity>
       </View>
-      {/* Button */}
-      <TouchableOpacity onPress={()=>{
-        setButtonState(!buttonState);
-      }}><View style={[styles.button,{backgroundColor:buttonState?GreenColor:RedColor}]}>
-        <Text style={styles.text}>{buttonState?'Mark':'Remove'}</Text>  
-      </View></TouchableOpacity>
+      
 
       {/* Render Header Row */}
       <View style={styles.row}>
@@ -319,6 +340,11 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
           </TouchableOpacity>;
         })}
       </View>
+      <View style={[styles.overLayer,{display:isWin?'flex':'none'}]}>
+        <Animated.Text style={[{color:'yellow',fontSize:winTextSize}]}>
+          You Won
+        </Animated.Text>
+      </View>
     </View>
   );
 };
@@ -362,19 +388,20 @@ const styles = StyleSheet.create({
     backgroundColor:"#98bef5",
   },
   button:{
-    marginBottom:20,
     alignItems:'center',
     backgroundColor:GreenColor,
-    height:40,
+    height:50,
     justifyContent: "center",
     borderRadius:10,
     borderColor:'green',
     borderWidth:2,
+    marginLeft:40,
   },
   hearts:{
-    marginBottom:10,
+    marginBottom:20,
     alignItems:'center',
-    justifyContent: "center",
+    flexDirection: "row",
+    justifyContent:'center',
   },
   overLayer:{
     position:'absolute',

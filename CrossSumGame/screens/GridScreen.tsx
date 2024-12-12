@@ -21,11 +21,6 @@ const screenHeight = Dimensions.get("window").height;
 
 const GridScreen: React.FC<GridScreenProps> = ({ route, navigation }) => {
   const { rows, cols } = route.params;
-  // const values=FillRandom(rows,cols);
-  // const answers=generateCorrectAnswers(values);
-  // const answersBool=GetCorrectAnswersMatrix(rows,cols,answers);
-  // const rowSums=GetRowSums(answersBool,values);
-  // const colSums=GetColSums(answersBool,values);
 
   return (
     <View style={styles.container}>

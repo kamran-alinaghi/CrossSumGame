@@ -1,7 +1,7 @@
 import { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
 import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Animated, Alert } from "react-native";
-import { FillRandom, generateCorrectAnswers, GetColSums, GetCorrectAnswersMatrix, GetRowSums } from "../assets/functions";
+import { FillRandom, GetColSums, GetCorrectAnswersMatrix2, GetRowSums } from "../assets/functions";
 import { WinAnimation } from "../assets/Animations";
 
 interface GridViewProps {
@@ -14,33 +14,31 @@ const screenHeight = Dimensions.get("window").height;
 const GameOverOptions = ["Restart", "New Game", "Home"];
 
 let gridValues: number[][] = [];
-let answers: [number, number][] = [];
 let correctAnswers: boolean[][] = [];
 let rowSums: number[] = [];
 let colSums: number[] = [];
-let isNewGame:boolean = true;
+let isNewGame: boolean = true;
 
 
-  //Animation Values
-  let alertColor:Animated.Value[][] = [];
-  
-  let winTextSize=new Animated.Value(1);
+//Animation Values
+let alertColor: Animated.Value[][] = [];
+
+let winTextSize = new Animated.Value(1);
 
 
 
 function SetInitialValues(rows: number, cols: number) {
-  if(isNewGame){
-    isNewGame=false;
+  if (isNewGame) {
+    isNewGame = false;
     gridValues = FillRandom(rows, cols);
-    answers = generateCorrectAnswers(gridValues);
-    correctAnswers = GetCorrectAnswersMatrix(rows, cols, answers);
+    correctAnswers = GetCorrectAnswersMatrix2(rows, cols);
     rowSums = GetRowSums(correctAnswers, gridValues);
     colSums = GetColSums(correctAnswers, gridValues);
 
-    alertColor.length=0;
-    for(let i=0;i<rows;i++){
-      const tempAnimatedArray:Animated.Value[]=[];
-      for(let j=0;j<cols;j++){
+    alertColor.length = 0;
+    for (let i = 0; i < rows; i++) {
+      const tempAnimatedArray: Animated.Value[] = [];
+      for (let j = 0; j < cols; j++) {
         tempAnimatedArray.push(new Animated.Value(0));
       }
       alertColor.push(tempAnimatedArray);
@@ -49,12 +47,12 @@ function SetInitialValues(rows: number, cols: number) {
 }
 
 const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
-  
-  let isRowFinished=false;
-  let isColFinished=false;
+
+  let isRowFinished = false;
+  let isColFinished = false;
   let isGameOn = true;
-  if(rows!=rowSums.length || cols!=colSums.length){isNewGame=true;}
-  SetInitialValues(rows,cols);
+  if (rows != rowSums.length || cols != colSums.length) { isNewGame = true; }
+  SetInitialValues(rows, cols);
 
   // Calculate cell size dynamically
   const cellSize = Math.min(screenWidth * 0.95, screenHeight * 0.95) / (Math.min(rows, cols) + 1);
@@ -65,16 +63,16 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   //State Variables
   const [heartsNum, setHeartsNum] = useState<number>(3);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
-  const [isWin,setIsWin] = useState<boolean>(false);
+  const [isWin, setIsWin] = useState<boolean>(false);
   const [addUpRows, setAddUpRows] = useState<number[]>(Array(rows).fill(0));
   const [addUpCols, setAddUpCols] = useState<number[]>(Array(cols).fill(0));
   const [revealedCells, setRevealedCells] = useState<boolean[][]>(Array(rows).fill(null).map(() => Array(cols).fill(false)));
-  const [buttonState,setButtonState] = useState<boolean>(false);
+  const [buttonState, setButtonState] = useState<boolean>(false);
   const [tableValues, setTableValues] = useState<number[][]>(gridValues);
   const [rowInitialSums, setRowInitialSums] = useState<number[]>(rowSums);
   const [colInitialSums, setColInitialSums] = useState<number[]>(colSums);
 
-  const RestartGame=()=>{
+  const RestartGame = () => {
     isRowFinished = false;
     isColFinished = false;
     isGameOn = true;
@@ -93,62 +91,62 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
 
 
   const handleCellClick = (rowIndex: number, colIndex: number) => {
-    if(buttonState){
-      if(!revealedCells[rowIndex][colIndex]){
+    if (buttonState) {
+      if (!revealedCells[rowIndex][colIndex]) {
         if (correctAnswers[rowIndex][colIndex]) {
-          ReavealAction(rowIndex,colIndex);
+          ReavealAction(rowIndex, colIndex);
           // Update addUpRows and addUpCols
-          AddUpRowAndColState(rowIndex,colIndex);
+          AddUpRowAndColState(rowIndex, colIndex);
         }
-        else{
-          if(tableValues[rowIndex][colIndex]>0){
-            ErrorAnimation(rowIndex,colIndex);
+        else {
+          if (tableValues[rowIndex][colIndex] > 0) {
+            ErrorAnimation(rowIndex, colIndex);
             ReduceHeart();
           }
         }
       }
     }
-    else{
-      if (!correctAnswers[rowIndex][colIndex]){
-        RemoveAction(rowIndex,colIndex);
+    else {
+      if (!correctAnswers[rowIndex][colIndex]) {
+        RemoveAction(rowIndex, colIndex);
       }
-      else{
-        if(!revealedCells[rowIndex][colIndex]){
-          ErrorAnimation(rowIndex,colIndex);
+      else {
+        if (!revealedCells[rowIndex][colIndex]) {
+          ErrorAnimation(rowIndex, colIndex);
           ReduceHeart();
         }
       }
     }
   };
 
-  const WinGame=()=>{
-    if(isColFinished && isRowFinished && isGameOn){
-      isGameOn=false;
+  const WinGame = () => {
+    if (isColFinished && isRowFinished && isGameOn) {
+      isGameOn = false;
       setIsWin(true);
-      const winAnimation=WinAnimation(winTextSize,1,80);
-      winAnimation.start(()=>{
+      const winAnimation = WinAnimation(winTextSize, 1, 80);
+      winAnimation.start(() => {
         setIsWin(false);
         NewGame();
       });
     }
   }
 
-  const GameOver=()=>{
-    isGameOn=false;
+  const GameOver = () => {
+    isGameOn = false;
     setIsGameOver(true);
   }
 
-  const ReduceHeart=()=>{
-    setHeartsNum((prev)=>{
-      const tempHeart=prev-1;
-      if(tempHeart==0){
+  const ReduceHeart = () => {
+    setHeartsNum((prev) => {
+      const tempHeart = prev - 1;
+      if (tempHeart == 0) {
         GameOver();
       }
       return tempHeart;
     });
   }
 
-  const ReavealAction=(rowIndex:number,colIndex:number)=>{
+  const ReavealAction = (rowIndex: number, colIndex: number) => {
     setRevealedCells((prev) => {
       const updated = prev.map((row, rIdx) =>
         row.map((cell, cIdx) =>
@@ -159,16 +157,17 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     });
   }
 
-  const AddUpRowAndColState=(rowIndex:number,colIndex:number)=>{
+  const AddUpRowAndColState = (rowIndex: number, colIndex: number) => {
     setAddUpRows((prev) => {
       const updated = prev.map<number>((value, index) => {
-        if (index == rowIndex) { 
-          let tempValue=value + gridValues[rowIndex][colIndex];
-          if(tempValue==rowInitialSums[rowIndex]){
+        if (index == rowIndex) {
+          let tempValue = value + gridValues[rowIndex][colIndex];
+          if (tempValue == rowInitialSums[rowIndex]) {
             setRowSum(rowIndex);
-            tempValue=0;
+            ClearTheRestOfRow(rowIndex);
+            tempValue = 0;
           }
-          return tempValue; 
+          return tempValue;
         }
         else { return value; }
       });
@@ -176,13 +175,14 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     });
     setAddUpCols((prev) => {
       const updated = prev.map((value, index) => {
-        if (index == colIndex) { 
-          let tempValue=value + gridValues[rowIndex][colIndex];
-          if(tempValue==colInitialSums[colIndex]){
+        if (index == colIndex) {
+          let tempValue = value + gridValues[rowIndex][colIndex];
+          if (tempValue == colInitialSums[colIndex]) {
             setColSum(colIndex);
-            tempValue=0;
+            ClearTheRestOfCol(colIndex);
+            tempValue = 0;
           }
-          return tempValue; 
+          return tempValue;
         }
         else { return value; }
       });
@@ -190,53 +190,82 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     });
   }
 
-  const setRowSum=(rowIndex:number)=>{
-    isRowFinished=true;
-    setRowInitialSums((prev)=>{
-      const updated=prev.map<number>((numValue,index)=>{
-        let tempNum=numValue;
-        if(index==rowIndex){tempNum = 0;}
-        if(tempNum>0){isRowFinished=false;}
-        return tempNum;
+  const ClearTheRestOfRow = (rowIndex: number) => {
+    setTableValues((prev) => {
+      const updated = prev.map((row, index) => {
+        let tempRow = row;
+        if (rowIndex == index) {
+          for (let i = 0; i < row.length; i++) {
+            if (!correctAnswers[index][i]) {
+              tempRow[i] = 0;
+            }
+          }
+        }
+        return tempRow;
       });
-      if(isRowFinished){WinGame();}
       return updated;
     });
   }
 
-  const setColSum=(colIndex:number)=>{
-    isColFinished=true;
-    setColInitialSums((prev)=>{
-      const updated=prev.map<number>((numValue,index)=>{
-        let tempNum=numValue;
-        if(index==colIndex){tempNum = 0;}
-        if(tempNum>0){isColFinished=false;}
-        return tempNum;
-      });
-      if(isColFinished){WinGame();}
+  const ClearTheRestOfCol = (colIndex: number) => {
+    setTableValues((prev) => {
+      const updated = prev;
+      for (let i = 0; i < updated.length; i++) {
+        if (!correctAnswers[i][colIndex]) {
+          updated[i][colIndex] = 0;
+        }
+      }
       return updated;
     });
   }
 
-  const RemoveAction=(rowIndex:number,colIndex:number)=>{
-    setTableValues((prev)=>{
-      const updated = prev.map<number[]>((rowTableValue,rowTableIndex)=>{
-        return rowTableValue.map<number>((colTableValue,colTableIndex)=>{
-          if(rowTableIndex==rowIndex && colTableIndex==colIndex){return 0;}
-          else{return colTableValue;}
+  const setRowSum = (rowIndex: number) => {
+    isRowFinished = true;
+    setRowInitialSums((prev) => {
+      const updated = prev.map<number>((numValue, index) => {
+        let tempNum = numValue;
+        if (index == rowIndex) { tempNum = 0; }
+        if (tempNum > 0) { isRowFinished = false; }
+        return tempNum;
+      });
+      if (isRowFinished) { WinGame(); }
+      return updated;
+    });
+  }
+
+  const setColSum = (colIndex: number) => {
+    isColFinished = true;
+    setColInitialSums((prev) => {
+      const updated = prev.map<number>((numValue, index) => {
+        let tempNum = numValue;
+        if (index == colIndex) { tempNum = 0; }
+        if (tempNum > 0) { isColFinished = false; }
+        return tempNum;
+      });
+      if (isColFinished) { WinGame(); }
+      return updated;
+    });
+  }
+
+  const RemoveAction = (rowIndex: number, colIndex: number) => {
+    setTableValues((prev) => {
+      const updated = prev.map<number[]>((rowTableValue, rowTableIndex) => {
+        return rowTableValue.map<number>((colTableValue, colTableIndex) => {
+          if (rowTableIndex == rowIndex && colTableIndex == colIndex) { return 0; }
+          else { return colTableValue; }
         });
       });
       return updated;
     });
   }
 
-  const ErrorAnimation=(rowIndex:number,colIndex:number)=>{
-    Animated.timing(alertColor[rowIndex][colIndex],{
+  const ErrorAnimation = (rowIndex: number, colIndex: number) => {
+    Animated.timing(alertColor[rowIndex][colIndex], {
       toValue: 1,
       useNativeDriver: false,
-      duration:150
-    }).start(()=>{
-      Animated.timing(alertColor[rowIndex][colIndex],{
+      duration: 150
+    }).start(() => {
+      Animated.timing(alertColor[rowIndex][colIndex], {
         toValue: 0,
         useNativeDriver: false,
         duration: 150
@@ -244,7 +273,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     });
   }
 
-  const GameOverActions=(index:number)=>{
+  const GameOverActions = (index: number) => {
     //Alert.alert(index.toString());
     switch (index) {
       case 0:
@@ -259,7 +288,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
     }
   }
 
-  const NewGame=()=>{
+  const NewGame = () => {
     isNewGame = true;
     SetInitialValues(rows, cols);
     RestartGame();
@@ -269,7 +298,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   return (
     <View style={styles.container}>
       {/* Hearts */}
-      <View style={[styles.hearts,{}]}>
+      <View style={[styles.hearts, {}]}>
         <Text style={[{ fontSize: 30 }]}>❤: {heartsNum}</Text>
         {/* Button */}
         <TouchableOpacity onPress={() => { setButtonState(!buttonState); }}>
@@ -278,7 +307,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
           </View>
         </TouchableOpacity>
       </View>
-      
+
 
       {/* Render Header Row */}
       <View style={styles.row}>
@@ -290,9 +319,9 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
         {colInitialSums.map((sum, colIndex) => (
           <View
             key={`col-sum-${colIndex}`}
-            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize, backgroundColor: sum>0?BlueColor:PinkColor }]}
+            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize, backgroundColor: sum > 0 ? BlueColor : PinkColor }]}
           >
-            <Text style={[styles.text, { fontSize: bigFontSize }]}>{sum>0?sum:'✓'}</Text>
+            <Text style={[styles.text, { fontSize: bigFontSize }]}>{sum > 0 ? sum : '✓'}</Text>
             <Text style={[styles.addUp, { left: cellSize / 20, top: cellSize / 20, fontSize: smallFontSize }]}>{addUpCols[colIndex] > 0 ? addUpCols[colIndex] : ''}</Text>
           </View>
         ))}
@@ -303,9 +332,9 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
         <View key={`row-${rowIndex}`} style={styles.row}>
           {/* Row sum */}
           <View
-            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize, backgroundColor: rowInitialSums[rowIndex]>0?BlueColor:PinkColor }]}
+            style={[styles.sumCell, { width: cellSize, height: cellSize, borderRadius: 0.2 * cellSize, backgroundColor: rowInitialSums[rowIndex] > 0 ? BlueColor : PinkColor }]}
           >
-            <Text style={[styles.text, { fontSize: bigFontSize }]}>{rowInitialSums[rowIndex]>0?rowInitialSums[rowIndex]:'✓'}</Text>
+            <Text style={[styles.text, { fontSize: bigFontSize }]}>{rowInitialSums[rowIndex] > 0 ? rowInitialSums[rowIndex] : '✓'}</Text>
             <Text style={[styles.addUp, { left: cellSize / 20, top: cellSize / 20, fontSize: smallFontSize }]}>{addUpRows[rowIndex] > 0 ? addUpRows[rowIndex] : ''}</Text>
           </View>
           {/* Regular cells */}
@@ -318,30 +347,32 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
                 style={[
                   styles.cell,
                   { width: cellSize, height: cellSize },
-                  { backgroundColor: revealedCells[rowIndex][colIndex] ? GreenColor : alertColor[rowIndex][colIndex].interpolate({
-                    inputRange:[0,1],
-                    outputRange:['#ffffff',RedColor]
-                  }), }
+                  {
+                    backgroundColor: revealedCells[rowIndex][colIndex] ? GreenColor : alertColor[rowIndex][colIndex].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['#ffffff', RedColor]
+                    }),
+                  }
                 ]}
               >
                 <Text style={[styles.text, {
-                }]}>{tableValues[rowIndex][colIndex]>0?tableValues[rowIndex][colIndex]:''}</Text>
+                }]}>{tableValues[rowIndex][colIndex] > 0 ? tableValues[rowIndex][colIndex] : ''}</Text>
               </Animated.View>
             </TouchableOpacity>
           ))}
         </View>
       ))}
-      <View style={[styles.overLayer,{display:isGameOver?'flex':'none'}]}>
-        {GameOverOptions.map((option,index)=>{
-          return <TouchableOpacity key={index} onPress={()=>{GameOverActions(index);}}>
+      <View style={[styles.overLayer, { display: isGameOver ? 'flex' : 'none' }]}>
+        {GameOverOptions.map((option, index) => {
+          return <TouchableOpacity key={index} onPress={() => { GameOverActions(index); }}>
             <View style={styles.gameOverButtons}>
               <Text style={styles.gameOverButtonText}>{option}</Text>
             </View>
           </TouchableOpacity>;
         })}
       </View>
-      <View style={[styles.overLayer,{display:isWin?'flex':'none'}]}>
-        <Animated.Text style={[{color:'yellow',fontSize:winTextSize}]}>
+      <View style={[styles.overLayer, { display: isWin ? 'flex' : 'none' }]}>
+        <Animated.Text style={[{ color: 'yellow', fontSize: winTextSize }]}>
           You Won
         </Animated.Text>
       </View>
@@ -349,10 +380,10 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   );
 };
 
-const PinkColor='#f699f8';
-const GreenColor='#4fca3b';
-const RedColor='#fe7e7e';
-const BlueColor='#0068ff';
+const PinkColor = '#f699f8';
+const GreenColor = '#4fca3b';
+const RedColor = '#fe7e7e';
+const BlueColor = '#0068ff';
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
@@ -384,50 +415,50 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 10,
   },
-  container:{
-    backgroundColor:"#98bef5",
+  container: {
+    backgroundColor: "#98bef5",
   },
-  button:{
-    alignItems:'center',
-    backgroundColor:GreenColor,
-    height:50,
+  button: {
+    alignItems: 'center',
+    backgroundColor: GreenColor,
+    height: 50,
     justifyContent: "center",
-    borderRadius:10,
-    borderColor:'green',
-    borderWidth:2,
-    marginLeft:40,
+    borderRadius: 10,
+    borderColor: 'green',
+    borderWidth: 2,
+    marginLeft: 40,
   },
-  hearts:{
-    marginBottom:20,
-    alignItems:'center',
+  hearts: {
+    marginBottom: 20,
+    alignItems: 'center',
     flexDirection: "row",
-    justifyContent:'center',
+    justifyContent: 'center',
   },
-  overLayer:{
-    position:'absolute',
+  overLayer: {
+    position: 'absolute',
     backgroundColor: 'rgba(0,0,0,0.8)',
-    width:screenWidth,
-    height:screenHeight - 60,
-    left:-10,
-    top:-10,
+    width: screenWidth,
+    height: screenHeight - 60,
+    left: -10,
+    top: -10,
     justifyContent: "center",
-    alignItems:'center'
-    
+    alignItems: 'center'
+
   },
-  gameOverButtons:{
-    marginBottom:20,
-    alignItems:'center',
-    backgroundColor:'#0000a9',
-    height:60,
+  gameOverButtons: {
+    marginBottom: 20,
+    alignItems: 'center',
+    backgroundColor: '#0000a9',
+    height: 60,
     justifyContent: "center",
-    borderRadius:10,
-    borderColor:'black',
-    borderWidth:2,
-    width:screenWidth/1.5,
+    borderRadius: 10,
+    borderColor: 'black',
+    borderWidth: 2,
+    width: screenWidth / 1.5,
   },
-  gameOverButtonText:{
-    fontSize:30,
-    color:'white',
+  gameOverButtonText: {
+    fontSize: 30,
+    color: 'white',
   }
 });
 

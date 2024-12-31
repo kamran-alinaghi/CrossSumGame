@@ -5,52 +5,6 @@ export function FillRandom(rows: number, cols: number) {
     return result;
 }
 
-export function generateCorrectAnswers(gridNums: number[][]): [number, number][] {
-    const correctAnswers: [number, number][] = [];
-    const columnsCovered = new Set<number>(); // Track columns already covered
-
-    gridNums.forEach((row, rowIndex) => {
-        // Generate a random number of correct answers for this row
-        const numCorrectAnswers = Math.floor(Math.random() * (row.length - 1)) + 1;
-
-        // Shuffle the indices of the row to randomly pick correct answers
-        const shuffledIndices = Array.from({ length: row.length }, (_, i) => i).sort(() => Math.random() - 0.5);
-
-        let addedCorrectAnswers = 0;
-
-        // First, ensure uncovered columns get an answer
-        for (const colIndex of shuffledIndices) {
-            if (!columnsCovered.has(colIndex)) {
-                correctAnswers.push([rowIndex, colIndex]);
-                columnsCovered.add(colIndex); // Mark this column as covered
-                addedCorrectAnswers++;
-
-                if (addedCorrectAnswers >= numCorrectAnswers) break;
-            }
-        }
-
-        // Add remaining correct answers randomly if needed
-        for (const colIndex of shuffledIndices) {
-            if (addedCorrectAnswers >= numCorrectAnswers) break;
-
-            correctAnswers.push([rowIndex, colIndex]);
-            addedCorrectAnswers++;
-        }
-    });
-
-    // Ensure all columns are covered (in case some were missed)
-    for (let colIndex = 0; colIndex < gridNums[0].length; colIndex++) {
-        if (!columnsCovered.has(colIndex)) {
-            // Find a random row to place this missing column answer
-            const randomRowIndex = Math.floor(Math.random() * gridNums.length);
-            correctAnswers.push([randomRowIndex, colIndex]);
-            columnsCovered.add(colIndex);
-        }
-    }
-
-    return correctAnswers;
-}
-
 export function GetRevealedArray(rows: number, cols: number): boolean[][] {
     let result = Array.from({ length: rows }, () =>
         Array.from({ length: cols }, () => false)
@@ -58,20 +12,6 @@ export function GetRevealedArray(rows: number, cols: number): boolean[][] {
     return result;
 }
 
-export function GetCorrectAnswersMatrix(rows: number, cols: number, answers: [number, number][]): boolean[][] {
-    const result: boolean[][] = [];
-    for (let i = 0; i < rows; i++) {
-        const tempArr: boolean[] = [];
-        for (let j = 0; j < cols; j++) {
-            tempArr.push(false);
-        }
-        result.push(tempArr);
-    }
-    for (let i = 0; i < answers.length; i++) {
-        result[answers[i][0]][answers[i][1]] = true;
-    }
-    return result;
-}
 
 export function GetRowSums(answers:boolean[][],data:number[][]){
     const result:number[]=[];
@@ -96,5 +36,38 @@ export function GetColSums(answers:boolean[][],data:number[][]){
             }
         });
     });
+    return result;
+}
+
+export function GetCorrectAnswersMatrix2(rows: number, cols: number): boolean[][]{
+    const result: boolean[][] = [];
+    for (let i = 0; i < rows; i++) {
+        const tempArray: boolean[] = new Array(cols).fill(false);
+        const numberOfCorrectAnswers: number = Math.floor(Math.random() * (cols - 1)) + 1;
+        let addedCount = 0;
+        while (addedCount < numberOfCorrectAnswers) {
+            const randomIndex = Math.floor(Math.random() * (cols - 1));
+            if (!tempArray[randomIndex]) {
+                tempArray[randomIndex] = true;
+                addedCount++;
+            }
+        }
+        result.push(tempArray);
+    }
+    for (let i = 0; i < cols; i++) {
+        let tempBool = false;
+        for (let j = 0; j < rows; j++) { if (result[j][i]) { tempBool = true; } }
+        if (!tempBool) {
+            const numberOfCorrectAnswers: number = Math.floor(Math.random() * (rows - 1)) + 1;
+            let addedCount = 0;
+            while (addedCount < numberOfCorrectAnswers) {
+                const randomRowIndex = Math.floor(Math.random() * (rows - 1));
+                if (!result[randomRowIndex][i]) {
+                    result[randomRowIndex][i] = true;
+                    addedCount++;
+                }
+            }
+        }
+    }
     return result;
 }

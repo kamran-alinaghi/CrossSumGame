@@ -1,7 +1,7 @@
 import { StackNavigationProp } from "@react-navigation/stack";
 import React, { useState } from "react";
 import { View, StyleSheet, Text, Dimensions, TouchableOpacity, Animated, Alert } from "react-native";
-import { FillRandom, GetColSums, GetCorrectAnswersMatrix2, GetRowSums } from "../assets/functions";
+import { FillRandom, GetColSums, GetCorrectAnswersMatrix_V2, GetRowSums } from "../assets/functions";
 import { WinAnimation } from "../assets/Animations";
 
 interface GridViewProps {
@@ -31,7 +31,7 @@ function SetInitialValues(rows: number, cols: number) {
   if (isNewGame) {
     isNewGame = false;
     gridValues = FillRandom(rows, cols);
-    correctAnswers = GetCorrectAnswersMatrix2(rows, cols);
+    correctAnswers = GetCorrectAnswersMatrix_V2(rows, cols);
     rowSums = GetRowSums(correctAnswers, gridValues);
     colSums = GetColSums(correctAnswers, gridValues);
 
@@ -48,8 +48,7 @@ function SetInitialValues(rows: number, cols: number) {
 
 const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
 
-  let isRowFinished = false;
-  let isColFinished = false;
+  const heartNumber = Math.floor(rows * cols / 12);
   let isGameOn = true;
   if (rows != rowSums.length || cols != colSums.length) { isNewGame = true; }
   SetInitialValues(rows, cols);
@@ -61,7 +60,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
 
 
   //State Variables
-  const [heartsNum, setHeartsNum] = useState<number>(3);
+  const [heartsNum, setHeartsNum] = useState<number>(heartNumber < 3 ? 3 : heartNumber);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [isWin, setIsWin] = useState<boolean>(false);
   const [addUpRows, setAddUpRows] = useState<number[]>(Array(rows).fill(0));
@@ -73,11 +72,9 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   const [colInitialSums, setColInitialSums] = useState<number[]>(colSums);
 
   const RestartGame = () => {
-    isRowFinished = false;
-    isColFinished = false;
     isGameOn = true;
 
-    setHeartsNum(3);
+    setHeartsNum(heartNumber < 3 ? 3 : heartNumber);
     setIsGameOver(false);
     setAddUpRows(Array(rows).fill(0));
     setAddUpCols(Array(cols).fill(0));
@@ -120,7 +117,7 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   };
 
   const WinGame = () => {
-    if (isColFinished && isRowFinished && isGameOn) {
+    if (isGameOn) {
       isGameOn = false;
       setIsWin(true);
       const winAnimation = WinAnimation(winTextSize, 1, 80);
@@ -158,51 +155,58 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   }
 
   const AddUpRowAndColState = (rowIndex: number, colIndex: number) => {
+    const tempRowValue = addUpRows[rowIndex] + gridValues[rowIndex][colIndex];
+    const tempColValue = addUpCols[colIndex] + gridValues[rowIndex][colIndex];
+    //Add the value of the correct answer to the row
     setAddUpRows((prev) => {
-      const updated = prev.map<number>((value, index) => {
-        if (index == rowIndex) {
-          let tempValue = value + gridValues[rowIndex][colIndex];
-          if (tempValue == rowInitialSums[rowIndex]) {
-            setRowSum(rowIndex);
-            ClearTheRestOfRow(rowIndex);
-            tempValue = 0;
-          }
-          return tempValue;
-        }
-        else { return value; }
-      });
+      const updated = prev;
+      updated[rowIndex] = tempRowValue == rowInitialSums[rowIndex] ? 0 : tempRowValue;
       return updated;
     });
+    //Checks if the row is completed
+    if (tempRowValue == rowInitialSums[rowIndex]) {
+      setRowSum(rowIndex);
+      ClearTheRestOfRow(rowIndex);
+    }
+    //Add the value of the correct answer to the column
     setAddUpCols((prev) => {
-      const updated = prev.map((value, index) => {
-        if (index == colIndex) {
-          let tempValue = value + gridValues[rowIndex][colIndex];
-          if (tempValue == colInitialSums[colIndex]) {
-            setColSum(colIndex);
-            ClearTheRestOfCol(colIndex);
-            tempValue = 0;
-          }
-          return tempValue;
-        }
-        else { return value; }
-      });
+      const updated = prev;
+      updated[colIndex] = tempColValue == colInitialSums[colIndex] ? 0 : tempColValue;
       return updated;
     });
+    //Checks if the column is completed
+    if(tempColValue == colInitialSums[colIndex]){
+      setColSum(colIndex);
+      ClearTheRestOfCol(colIndex);
+    }
+    //Checks the Win conditions
+    if (tempRowValue == rowInitialSums[rowIndex] && tempColValue == colInitialSums[colIndex]){
+      let completeRow = true;
+      let completeCol = true;
+      for (let i = 0; i < rowInitialSums.length; i++) {
+        if (i != rowIndex && rowInitialSums[i] > 0) {
+          completeRow = false;
+          break;
+        }
+      }
+      for (let i = 0; i < colInitialSums.length; i++) {
+        if (i != colIndex && colInitialSums[i] > 0) {
+          completeCol = false;
+          break;
+        }
+      }
+      if (completeRow && completeCol) WinGame();
+    }
   }
 
   const ClearTheRestOfRow = (rowIndex: number) => {
     setTableValues((prev) => {
-      const updated = prev.map((row, index) => {
-        let tempRow = row;
-        if (rowIndex == index) {
-          for (let i = 0; i < row.length; i++) {
-            if (!correctAnswers[index][i]) {
-              tempRow[i] = 0;
-            }
-          }
+      const updated = prev;
+      for (let i = 0; i < updated[rowIndex].length; i++) {
+        if (!correctAnswers[rowIndex][i]) {
+          updated[rowIndex][i] = 0;
         }
-        return tempRow;
-      });
+      }
       return updated;
     });
   }
@@ -220,29 +224,17 @@ const GridView: React.FC<GridViewProps> = ({ rows, cols, navigation }) => {
   }
 
   const setRowSum = (rowIndex: number) => {
-    isRowFinished = true;
     setRowInitialSums((prev) => {
-      const updated = prev.map<number>((numValue, index) => {
-        let tempNum = numValue;
-        if (index == rowIndex) { tempNum = 0; }
-        if (tempNum > 0) { isRowFinished = false; }
-        return tempNum;
-      });
-      if (isRowFinished) { WinGame(); }
+      const updated = prev;
+      updated[rowIndex] = 0;
       return updated;
     });
   }
 
   const setColSum = (colIndex: number) => {
-    isColFinished = true;
     setColInitialSums((prev) => {
-      const updated = prev.map<number>((numValue, index) => {
-        let tempNum = numValue;
-        if (index == colIndex) { tempNum = 0; }
-        if (tempNum > 0) { isColFinished = false; }
-        return tempNum;
-      });
-      if (isColFinished) { WinGame(); }
+      const updated = prev;
+      updated[colIndex] = 0;
       return updated;
     });
   }

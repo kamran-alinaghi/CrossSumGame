@@ -39,7 +39,7 @@ export function GetColSums(answers:boolean[][],data:number[][]){
     return result;
 }
 
-export function GetCorrectAnswersMatrix2(rows: number, cols: number): boolean[][]{
+export function GetCorrectAnswersMatrix_V2(rows: number, cols: number): boolean[][]{
     const result: boolean[][] = [];
     for (let i = 0; i < rows; i++) {
         const tempArray: boolean[] = new Array(cols).fill(false);

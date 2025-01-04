@@ -43,7 +43,7 @@ export function GetCorrectAnswersMatrix_V2(rows: number, cols: number): boolean[
     const result: boolean[][] = [];
     for (let i = 0; i < rows; i++) {
         const tempArray: boolean[] = new Array(cols).fill(false);
-        const numberOfCorrectAnswers: number = Math.floor(Math.random() * (cols - 1)) + 1;
+        const numberOfCorrectAnswers: number = Math.floor(Math.random() * (cols - 2)) + 1;
         let addedCount = 0;
         while (addedCount < numberOfCorrectAnswers) {
             const randomIndex = Math.floor(Math.random() * (cols - 1));
@@ -58,7 +58,7 @@ export function GetCorrectAnswersMatrix_V2(rows: number, cols: number): boolean[
         let tempBool = false;
         for (let j = 0; j < rows; j++) { if (result[j][i]) { tempBool = true; } }
         if (!tempBool) {
-            const numberOfCorrectAnswers: number = Math.floor(Math.random() * (rows - 1)) + 1;
+            const numberOfCorrectAnswers: number = Math.floor(Math.random() * (rows - 2)) + 1;
             let addedCount = 0;
             while (addedCount < numberOfCorrectAnswers) {
                 const randomRowIndex = Math.floor(Math.random() * (rows - 1));

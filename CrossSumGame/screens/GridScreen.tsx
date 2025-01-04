@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { RouteProp } from "@react-navigation/native";
 import GridView from "../Components/GridView";
-import { FillRandom, generateCorrectAnswers, GetColSums, GetCorrectAnswersMatrix, GetRevealedArray, GetRowSums } from "../assets/functions";
-import PuzzleView from "../Components/PuzzleView";
 import { StackNavigationProp } from "@react-navigation/stack";
 
 type RootStackParamList = {

@@ -20,7 +20,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }
 
   const CalculateMax = (cellSize: number) => {
-    maxHCells = 10; // (Math.floor(screenWidth / cellSize) - 1);
+    maxHCells = 10;
     maxVCells = (Math.floor((screenHeight - 150) / cellSize) - 1);
   }
   
@@ -37,15 +37,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if(cols<3){setCols(3);tempCols=3;}
     navigation.navigate("Grid", { rows: tempRows, cols: tempCols });
   };
-
-  const ReadValue = (str:string, max:null|number)=>{
-    let tempValue = Number(str);
-    if (isNaN(tempValue)) { tempValue = 0; }
-    if(max){
-      if (tempValue>max){tempValue=max;}
-    }
-    return tempValue;
-  }
 
 
   return (
